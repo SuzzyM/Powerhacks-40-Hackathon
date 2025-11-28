@@ -36,7 +36,13 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline';",
+            // SECURITY: Allow images from self and trusted CDNs only.
+            // NOTE: External survivor-related imagery (e.g., Pexels) is whitelisted here.
+            value:
+              "default-src 'self'; " +
+              "img-src 'self' https://images.pexels.com data: blob:; " +
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline'; " +
+              "style-src 'self' 'unsafe-inline';",
           },
         ],
       },

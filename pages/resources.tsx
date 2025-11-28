@@ -4,10 +4,10 @@ import QuickExitButton from '@/src/components/QuickExitButton';
 
 /**
  * Resources Page
- * 
+ *
  * SECURITY: This page provides a searchable directory of support resources.
  * All data should be stored securely and validated server-side.
- * 
+ *
  * In production:
  * 1. Implement server-side search with input sanitization
  * 2. Store resource data in PostgreSQL with RLS enabled
@@ -17,11 +17,27 @@ import QuickExitButton from '@/src/components/QuickExitButton';
 interface Resource {
   id: string;
   name: string;
-  type: 'hotline' | 'legal' | 'shelter' | 'counseling';
+  // NOTE: Types map to the filter dropdown (hotlines, legal, tech-safety, etc.)
+  type:
+    | 'hotline'
+    | 'legal'
+    | 'tech-safety'
+    | 'forensics'
+    | 'local-agency'
+    | 'counseling';
   phone?: string;
   website?: string;
   location?: string;
   description: string;
+}
+
+interface StoryResource {
+  id: string;
+  title: string;
+  type: 'video' | 'article';
+  url: string;
+  source: string;
+  summary: string;
 }
 
 export default function Resources() {
@@ -34,6 +50,45 @@ export default function Resources() {
   // 2. Implement server-side search and filtering
   // 3. Sanitize all user inputs
   // 4. Use parameterized queries to prevent SQL injection
+
+  const storyResources: StoryResource[] = [
+    {
+      id: 'story-1',
+      title: 'Rebuilding After Online Abuse – Survivor Tech Safety Story',
+      type: 'video',
+      url: 'https://www.youtube.com/results?search_query=survivor+story+online+abuse+and+recovery',
+      source: 'YouTube – curated search',
+      summary:
+        'Short talks and survivor stories about recognizing digital abuse, documenting it safely, and rebuilding a secure digital life.',
+    },
+    {
+      id: 'story-2',
+      title: 'Escaping Digital Stalking – How Survivors Took Back Control',
+      type: 'article',
+      url: 'https://duckduckgo.com/?q=survivor+story+digital+stalking+and+tech+safety',
+      source: 'DuckDuckGo – curated search',
+      summary:
+        'Articles describing how survivors identified spyware, secured their devices, and worked with advocates to stay safer.',
+    },
+    {
+      id: 'story-3',
+      title: 'Surviving Image-Based Abuse (Non-Consensual Sharing)',
+      type: 'article',
+      url: 'https://duckduckgo.com/?q=survivor+story+image+based+abuse+revenge+porn+support',
+      source: 'Digital safety organizations',
+      summary:
+        'Real stories about people whose private images were shared without consent and the legal, emotional, and technical support that helped them.',
+    },
+    {
+      id: 'story-4',
+      title: 'From Constant Monitoring to Digital Freedom',
+      type: 'video',
+      url: 'https://www.youtube.com/results?search_query=coercive+control+technology+survivor+story',
+      source: 'YouTube – curated search',
+      summary:
+        'Survivors explaining how they recognized tech-based coercive control and worked with advocates to regain privacy.',
+    },
+  ];
 
   const mockResources: Resource[] = [
     {
@@ -51,11 +106,65 @@ export default function Resources() {
       phone: '1-800-XXX-XXXX',
       description: 'Free legal assistance for those in need',
     },
+    {
+      id: '3',
+      name: 'Technology Safety Specialists (Online Safety Helplines)',
+      type: 'tech-safety',
+      website: 'https://duckduckgo.com/?q=technology+safety+specialist+domestic+violence',
+      description:
+        'Professionals and advocates who help survivors lock down phones, social media, email, and devices after digital harm.',
+    },
+    {
+      id: '4',
+      name: 'Digital Forensic Experts (Evidence Preservation)',
+      type: 'forensics',
+      website: 'https://duckduckgo.com/?q=digital+forensics+expert+cyber+stalking+support',
+      description:
+        'Specialists who can help safely collect, preserve, and document digital evidence (messages, logs, images) for investigations.',
+    },
+    {
+      id: '5',
+      name: 'Cyber-Law & Online Safety Attorneys',
+      type: 'legal',
+      website: 'https://duckduckgo.com/?q=cyber+law+attorney+online+harassment',
+      description:
+        'Lawyers experienced with cyberstalking, image-based abuse, online harassment, and privacy violations.',
+    },
+    {
+      id: '6',
+      name: 'Local Domestic Violence & Sexual Assault Agencies',
+      type: 'local-agency',
+      website: 'https://duckduckgo.com/?q=local+domestic+violence+agency+near+me',
+      description:
+        'Local agencies that can connect you with counselors, legal advocates, and tech-safety support in your area.',
+    },
+    {
+      id: '7',
+      name: 'Crisis Counseling & Trauma-Informed Therapists',
+      type: 'counseling',
+      website: 'https://duckduckgo.com/?q=trauma+informed+therapist+online+abuse',
+      description:
+        'Counselors who understand digital harm and can support you emotionally as you recover and rebuild your digital life.',
+    },
   ];
 
   const handleSearch = () => {
     // Placeholder: In production, this would call /api/resources with search params
-    setResources(mockResources);
+    // For now, do a simple client-side filter by type and search text.
+    const query = searchQuery.trim().toLowerCase();
+
+    const filtered = mockResources.filter((resource) => {
+      const matchesType = filterType === 'all' || resource.type === filterType;
+      const matchesQuery =
+        !query ||
+        resource.name.toLowerCase().includes(query) ||
+        resource.description.toLowerCase().includes(query) ||
+        (resource.location && resource.location.toLowerCase().includes(query));
+
+      return matchesType && matchesQuery;
+    });
+
+    setResources(filtered);
   };
 
   return (
@@ -76,6 +185,42 @@ export default function Resources() {
               Support Resources
             </h1>
 
+            {/* Survivor Stories: Videos & Articles */}
+            <section className="mb-10">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                Stories of Digital Harm, Survival & Recovery
+              </h2>
+              <p className="text-gray-700 mb-4">
+                These links point to videos and articles where people describe how they experienced
+                digital harm (online abuse, stalking, image-based abuse) and the concrete steps they
+                took to stay safer, get support, and rebuild their lives.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {storyResources.map((story) => (
+                  <a
+                    key={story.id}
+                    href={story.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-white rounded-lg shadow-md p-4 hover:shadow-xl transition-shadow border border-gray-100"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {story.title}
+                      </h3>
+                      <span className="text-xs uppercase tracking-wide text-gray-500">
+                        {story.type === 'video' ? 'Video' : 'Article'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-2">{story.summary}</p>
+                    <p className="text-xs text-gray-500">
+                      Source: <span className="font-medium">{story.source}</span>
+                    </p>
+                  </a>
+                ))}
+              </div>
+            </section>
+
             {/* Search and Filter */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
               <div className="flex flex-col md:flex-row gap-4">
@@ -93,8 +238,10 @@ export default function Resources() {
                 >
                   <option value="all">All Types</option>
                   <option value="hotline">Hotlines</option>
-                  <option value="legal">Legal Aid</option>
-                  <option value="shelter">Shelters</option>
+                  <option value="tech-safety">Tech Safety Specialists</option>
+                  <option value="forensics">Digital Forensic Experts</option>
+                  <option value="legal">Cyber-Law / Legal Aid</option>
+                  <option value="local-agency">Local Support Agencies</option>
                   <option value="counseling">Counseling</option>
                 </select>
                 <button

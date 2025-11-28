@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import QuickExitButton from '@/src/components/QuickExitButton';
 import { useCommunity } from '@/src/contexts/CommunityContext';
+import ForumThreadCard from '@/src/components/ForumThreadCard';
 
 /**
  * Community Forum List Page
@@ -22,6 +23,8 @@ interface ForumThread {
   authorId: string; // SECURITY: This is an anonymized ID, not a real username
   createdAt: string;
   replyCount: number;
+  snippet?: string;
+  lastActivity?: string;
 }
 
 export default function CommunityForum() {
@@ -30,37 +33,68 @@ export default function CommunityForum() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const threadsPerPage = 10;
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortMode, setSortMode] = useState<'recent' | 'replies'>('recent');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'support' | 'resources' | 'legal'>('all');
 
   useEffect(() => {
-    // SECURITY: This is a placeholder. In production:
-    // 1. Fetch threads from /api/forum endpoint
-    // 2. Server must validate and sanitize all data
-    // 3. Never return any identifying information
-    // 4. Implement pagination server-side
-    
-    // Placeholder data
-    const mockThreads: ForumThread[] = [
-      {
-        id: '1',
-        title: 'Welcome to the Community',
-        authorId: 'anon_abc123_xyz',
-        createdAt: new Date().toISOString(),
-        replyCount: 5,
-      },
-      {
-        id: '2',
-        title: 'Resources and Support',
-        authorId: 'anon_def456_uvw',
-        createdAt: new Date().toISOString(),
-        replyCount: 12,
-      },
-    ];
-    
-    setTimeout(() => {
-      setThreads(mockThreads);
-      setLoading(false);
-    }, 500);
+    // SECURITY: Fetch threads from /api/forum endpoint
+    // In production:
+    // 1. Server must validate and sanitize all data
+    // 2. Never return any identifying information
+    // 3. Implement pagination server-side
+
+    const fetchThreads = async () => {
+      try {
+        const response = await fetch(`/api/forum?page=${currentPage}`);
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch threads');
+        }
+
+        const data = await response.json();
+        setThreads(data.threads || []);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching threads:', err);
+        // Fallback to empty array on error
+        setThreads([]);
+        setLoading(false);
+      }
+    };
+
+    fetchThreads();
   }, [currentPage]);
+
+  const filteredAndSortedThreads = threads
+    .filter((thread) => {
+      const query = searchQuery.trim().toLowerCase();
+      if (!query && categoryFilter === 'all') return true;
+
+      const matchesQuery =
+        !query ||
+        thread.title.toLowerCase().includes(query) ||
+        (thread.snippet && thread.snippet.toLowerCase().includes(query));
+
+      // Placeholder category mapping (in production, category would be explicit)
+      const title = thread.title.toLowerCase();
+      const matchesCategory =
+        categoryFilter === 'all' ||
+        (categoryFilter === 'support' && title.includes('welcome')) ||
+        (categoryFilter === 'resources' && title.includes('resources')) ||
+        (categoryFilter === 'legal' && title.includes('legal'));
+
+      return matchesQuery && matchesCategory;
+    })
+    .sort((a, b) => {
+      if (sortMode === 'replies') {
+        return (b.replyCount || 0) - (a.replyCount || 0);
+      }
+      // recent
+      const dateA = new Date(a.lastActivity || a.createdAt).getTime();
+      const dateB = new Date(b.lastActivity || b.createdAt).getTime();
+      return dateB - dateA;
+    });
 
   return (
     <>
@@ -69,93 +103,137 @@ export default function CommunityForum() {
         <meta name="robots" content="noindex, nofollow" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-50">
         <div className="fixed top-4 right-4 z-50">
           <QuickExitButton />
         </div>
 
         <div className="container mx-auto px-4 py-16">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
-              <h1 className="text-4xl font-bold text-gray-900">
-                Community Forum
-              </h1>
+          <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-8">
+            {/* Sidebar / Navigation */}
+            <aside className="md:w-64 space-y-4">
+              <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4 shadow-md">
+                <h1 className="text-2xl font-bold mb-1">Community Forum</h1>
+                <p className="text-xs text-slate-300">
+                  A calm, anonymous space to talk about digital harm, coping, and next steps.
+                </p>
+              </div>
+
+              <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4 space-y-3 text-xs text-slate-200">
+                <p>
+                  <strong className="block mb-1 text-slate-100">Anonymity</strong>
+                  All posts use system-generated pseudonyms. Your current anonymous ID is:
+                </p>
+                <code className="block bg-slate-800/80 border border-slate-600 rounded px-2 py-1 text-[11px] break-all">
+                  {anonymousId}
+                </code>
+                <p className="text-[11px] text-slate-400">
+                  Please avoid sharing real names, emails, phone numbers, or specific locations.
+                </p>
+              </div>
+
+              <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4 text-xs text-slate-200 space-y-2">
+                <p className="font-semibold text-slate-100">Filters</p>
+                <div className="space-y-2">
+                  <select
+                    value={sortMode}
+                    onChange={(e) => setSortMode(e.target.value as 'recent' | 'replies')}
+                    className="w-full rounded-md border border-slate-600 bg-slate-900/90 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  >
+                    <option value="recent">Most Recent</option>
+                    <option value="replies">Most Replies</option>
+                  </select>
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) =>
+                      setCategoryFilter(e.target.value as 'all' | 'support' | 'resources' | 'legal')
+                    }
+                    className="w-full rounded-md border border-slate-600 bg-slate-900/90 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  >
+                    <option value="all">All Topics</option>
+                    <option value="support">Introductions &amp; Support</option>
+                    <option value="resources">Resources &amp; Tips</option>
+                    <option value="legal">Legal / Policy</option>
+                  </select>
+                </div>
+              </div>
+
               <Link
                 href="/community/new"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-colors"
+                className="inline-flex items-center justify-center rounded-full bg-emerald-500 hover:bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-colors"
               >
-                New Thread
+                Start a New Thread
               </Link>
-            </div>
+            </aside>
 
-            {/* Security Notice */}
-            <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-6">
-              <p className="text-sm text-blue-800">
-                <strong>Privacy:</strong> All posts are anonymous. Your current anonymous ID: <code className="bg-blue-100 px-1 rounded">{anonymousId}</code>
-              </p>
-            </div>
+            {/* Main content */}
+            <section className="flex-1 space-y-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex-1">
+                  <label className="sr-only" htmlFor="thread-search">
+                    Search threads
+                  </label>
+                  <input
+                    id="thread-search"
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search threads (e.g., stalking, password safety, image-based abuse)..."
+                    className="w-full rounded-full border border-slate-600 bg-slate-900/80 px-4 py-2 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  />
+                </div>
 
-            {loading ? (
-              <div className="text-center py-12">
-                <p className="text-gray-600">Loading threads...</p>
+                <p className="text-xs text-slate-300 md:text-right">
+                  Threads are anonymous. Please share only what feels safe for you today.
+                </p>
               </div>
-            ) : (
-              <>
-                <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Title
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Author
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Replies
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Date
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {threads.map((thread) => (
-                        <tr key={thread.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Link
-                              href={`/community/thread/${thread.id}`}
-                              className="text-blue-600 hover:text-blue-800 font-medium"
-                            >
-                              {thread.title}
-                            </Link>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {/* SECURITY: Display anonymized ID only */}
-                            {thread.authorId}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {thread.replyCount}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(thread.createdAt).toLocaleDateString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
 
-                {/* Pagination Placeholder */}
-                <div className="mt-6 flex justify-center">
-                  <div className="bg-white rounded-lg shadow-md p-4">
-                    <p className="text-sm text-gray-600">
-                      Page {currentPage} (Pagination to be implemented)
-                    </p>
-                  </div>
+              {loading ? (
+                <div className="flex justify-center py-16">
+                  <p className="text-slate-200">Loading threads...</p>
                 </div>
-              </>
-            )}
+              ) : filteredAndSortedThreads.length === 0 ? (
+                <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-8 text-center text-slate-200">
+                  <p className="mb-2 text-sm">
+                    No threads match your filters yet.
+                  </p>
+                  <p className="text-xs text-slate-400 mb-4">
+                    You can adjust the search/filters, or start a new thread if you&apos;re ready
+                    to share.
+                  </p>
+                  <Link
+                    href="/community/new"
+                    className="inline-flex items-center justify-center rounded-full bg-emerald-500 hover:bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-md transition-colors"
+                  >
+                    Start a New Thread
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-3">
+                    {filteredAndSortedThreads.map((thread) => (
+                      <ForumThreadCard
+                        key={thread.id}
+                        id={thread.id}
+                        title={thread.title}
+                        authorId={thread.authorId}
+                        createdAt={thread.createdAt}
+                        replyCount={thread.replyCount}
+                        snippet={thread.snippet}
+                        lastActivity={thread.lastActivity}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Pagination Placeholder */}
+                  <div className="mt-4 flex justify-center">
+                    <div className="rounded-full border border-slate-700 bg-slate-900/80 px-4 py-2 text-xs text-slate-200">
+                      Page {currentPage} (pagination to be implemented)
+                    </div>
+                  </div>
+                </>
+              )}
+            </section>
           </div>
         </div>
       </div>

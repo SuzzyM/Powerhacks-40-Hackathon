@@ -56,10 +56,56 @@ export default async function handler(
     // 3. Implement pagination server-side
     // 4. Never return any identifying information
 
+    // If threadId is provided, return a single thread with replies
+    if (threadId) {
+      // SECURITY: Placeholder data - in production, fetch from database
+      const mockThread = {
+        id: threadId,
+        title: 'Welcome to the Community',
+        content: 'This is a sample thread content. In production, this would be fetched from the database.',
+        authorId: 'anon_abc123_xyz',
+        createdAt: new Date().toISOString(),
+        replies: [
+          {
+            id: '1',
+            content: 'This is a sample reply to the thread.',
+            authorId: 'anon_def456_uvw',
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      };
+
+      return res.status(200).json(mockThread);
+    }
+
+    // Otherwise, return list of threads
+    const mockThreads = [
+      {
+        id: '1',
+        title: 'Welcome to the Community',
+        authorId: 'anon_abc123_xyz',
+        createdAt: new Date().toISOString(),
+        snippet:
+          'A gentle place to say hello, share what brings you here, or read how others are navigating digital harm.',
+        replyCount: 5,
+        lastActivity: new Date().toISOString(),
+      },
+      {
+        id: '2',
+        title: 'Resources and Support',
+        authorId: 'anon_def456_uvw',
+        createdAt: new Date().toISOString(),
+        snippet:
+          'Share and discover hotlines, tech-safety tips, legal resources, and local organizations that have helped.',
+        replyCount: 12,
+        lastActivity: new Date().toISOString(),
+      },
+    ];
+
     return res.status(200).json({
-      threads: [],
+      threads: mockThreads,
       page: parseInt(page as string),
-      totalPages: 0,
+      totalPages: 1,
     });
   }
 

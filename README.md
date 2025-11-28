@@ -1,6 +1,6 @@
 # SafeHarbor Web Portal
 
-A secure web portal providing community support, resources, AI chat assistance, and emergency SOS functionality.
+A secure web portal providing community support, resources, AI chat assistance, and a private self-care space (journaling & safety planning).
 
 ## Security Features
 
@@ -10,6 +10,7 @@ A secure web portal providing community support, resources, AI chat assistance, 
 - **Secure API Proxy**: All AI API calls are proxied through server-side endpoints
 - **Session-Based Chat**: Chat history is not permanently stored
 - **HTTPS Enforcement**: All traffic must use HTTPS with HSTS headers
+ - **Encrypted Journaling (Design)**: Journal entries and safety plans are designed to be end-to-end encrypted so that only the user can read them (server stores ciphertext only).
 
 ## Technology Stack
 
@@ -68,11 +69,11 @@ npm run dev
 │   │   └── index.tsx          # Community forum list
 │   ├── resources.tsx          # Resource directory
 │   ├── chat.tsx               # AI chat page
-│   ├── sos.tsx                # Emergency SOS page
+│   ├── self-care.tsx          # Journaling & Safety Plan page
 │   └── api/
 │       ├── chat.ts            # AI chat API endpoint
 │       ├── forum.ts           # Forum API endpoint
-│       └── sos-trigger.ts     # SOS trigger API endpoint
+│       └── journal.ts         # Journal & safety plan API endpoint
 ├── src/
 │   ├── components/
 │   │   └── QuickExitButton.tsx
@@ -81,7 +82,7 @@ npm run dev
 │   └── api/
 │       ├── chat.ts
 │       ├── forum.ts
-│       └── sos-trigger.ts
+│       └── journal.ts
 └── styles/
     └── globals.css
 ```
