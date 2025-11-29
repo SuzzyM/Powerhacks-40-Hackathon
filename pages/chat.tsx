@@ -74,7 +74,8 @@ export default function Chat() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get response');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to get response');
       }
 
       const data = await response.json();
@@ -86,12 +87,12 @@ export default function Chat() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Chat error:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'I apologize, but I am unable to respond at this time. Please try again later.',
+        content: `Error: ${error.message || 'I apologize, but I am unable to respond at this time.'}`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -154,16 +155,14 @@ export default function Chat() {
                 messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex ${
-                      message.role === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
+                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'
+                      }`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-lg p-4 ${
-                        message.role === 'user'
+                      className={`max-w-[80%] rounded-lg p-4 ${message.role === 'user'
                           ? 'bg-blue-600 text-white'
                           : 'bg-gray-200 text-gray-900'
-                      }`}
+                        }`}
                     >
                       <p className="whitespace-pre-wrap">{message.content}</p>
                       <p className="text-xs mt-2 opacity-70">
