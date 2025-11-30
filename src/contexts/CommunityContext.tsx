@@ -33,15 +33,14 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const [anonymousId, setAnonymousId] = useState<string>(() => {
-    // SECURITY: Only use sessionStorage, never localStorage
-    // This ensures the ID is cleared when the browser session ends
+    // SECURITY: Use localStorage for persistence so users can track their posts
     if (typeof window !== 'undefined') {
-      const stored = sessionStorage.getItem('safeharbor_anonymous_id');
+      const stored = localStorage.getItem('safeharbor_anonymous_id');
       if (stored) {
         return stored;
       }
       const newId = generateAnonymousId();
-      sessionStorage.setItem('safeharbor_anonymous_id', newId);
+      localStorage.setItem('safeharbor_anonymous_id', newId);
       return newId;
     }
     return generateAnonymousId();
@@ -51,7 +50,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     const newId = generateAnonymousId();
     setAnonymousId(newId);
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('safeharbor_anonymous_id', newId);
+      localStorage.setItem('safeharbor_anonymous_id', newId);
     }
   };
 

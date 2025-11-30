@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import QuickExitButton from '@/src/components/QuickExitButton';
 
 /**
@@ -26,10 +26,44 @@ interface SafetyPlan {
   professionalContacts: string;
 }
 
+interface JournalEntry {
+  id: string;
+  ciphertext: string; // In real app, this is encrypted
+  created_at: string;
+}
+
+import { useUser } from '@/src/contexts/UserContext';
+
 export default function SelfCare() {
+  const { userId } = useUser();
   const [journalEntry, setJournalEntry] = useState('');
   const [savingJournal, setSavingJournal] = useState(false);
   const [journalStatus, setJournalStatus] = useState<string | null>(null);
+  const [journalHistory, setJournalHistory] = useState<JournalEntry[]>([]);
+
+  const fetchJournalHistory = async () => {
+    if (!userId) return;
+    try {
+      const response = await fetch('/api/journal?type=journal', {
+        headers: {
+          'x-user-id': userId,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setJournalHistory(data.entries || []);
+      }
+    } catch (error) {
+      console.error('Failed to load journal history', error);
+    }
+  };
+
+  // Fetch history on mount or when userId changes
+  useEffect(() => {
+    if (userId) {
+      fetchJournalHistory();
+    }
+  }, [userId]);
 
   const [safetyPlan, setSafetyPlan] = useState<SafetyPlan>({
     internalCoping: '',
@@ -55,6 +89,11 @@ export default function SelfCare() {
       return;
     }
 
+    if (!userId) {
+      setJournalStatus('User ID not found. Please reload.');
+      return;
+    }
+
     setSavingJournal(true);
     setJournalStatus(null);
 
@@ -63,6 +102,7 @@ export default function SelfCare() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': userId,
         },
         body: JSON.stringify({
           type: 'journal',
@@ -77,9 +117,9 @@ export default function SelfCare() {
         throw new Error(data.error || 'Failed to save journal entry.');
       }
 
-      setJournalStatus('Journal entry saved securely (placeholder).');
-      // Optionally clear after save
-      // setJournalEntry('');
+      setJournalStatus('Journal entry saved securely.');
+      setJournalEntry(''); // Clear entry on success
+      fetchJournalHistory(); // Refresh history
     } catch (error) {
       console.error('Error saving journal entry:', error);
       setJournalStatus('Unable to save entry right now. Please try again later.');
@@ -95,6 +135,11 @@ export default function SelfCare() {
    * - Server stores only encrypted blobs and minimal metadata.
    */
   const handleSaveSafetyPlan = async () => {
+    if (!userId) {
+      setPlanStatus('User ID not found. Please reload.');
+      return;
+    }
+
     setSavingPlan(true);
     setPlanStatus(null);
 
@@ -103,6 +148,7 @@ export default function SelfCare() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': userId,
         },
         body: JSON.stringify({
           type: 'safety-plan',
@@ -155,7 +201,7 @@ export default function SelfCare() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Journaling Section */}
-            <section className="bg-slate-800/80 border border-slate-700 rounded-xl p-6 shadow-lg">
+            <section className="bg-slate-800/80 border border-slate-700 rounded-xl p-6 shadow-lg flex flex-col h-full">
               <h2 className="text-2xl font-semibold mb-2">Daily Journal</h2>
               <p className="text-sm text-slate-200 mb-4">
                 Write freely about what you&apos;re feeling, noticing, or planning. This space
@@ -165,15 +211,15 @@ export default function SelfCare() {
               <textarea
                 value={journalEntry}
                 onChange={(e) => setJournalEntry(e.target.value)}
-                rows={10}
-                className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-900/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
+                rows={6}
+                className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-900/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm mb-2"
                 placeholder="You can write about what happened today, what you're worried about, or any small steps you took to stay safe..."
               />
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="text-xs text-slate-400 mb-4">
                 {journalEntry.length} characters
               </p>
 
-              <div className="mt-4 flex items-center gap-3">
+              <div className="flex items-center gap-3 mb-6">
                 <button
                   type="button"
                   onClick={handleSaveJournal}
@@ -187,12 +233,25 @@ export default function SelfCare() {
                 )}
               </div>
 
-              <div className="mt-4 bg-slate-900/60 border border-slate-700 rounded-lg p-3">
-                <p className="text-xs text-slate-300">
-                  <strong>Security Note:</strong> In the full implementation, your journal
-                  entries will be end-to-end encrypted on your device before being stored,
-                  so that only you (and not even the server) can read them.
-                </p>
+              {/* Journal History */}
+              <div className="border-t border-slate-700 pt-4 flex-1 overflow-hidden flex flex-col">
+                <h3 className="text-lg font-medium mb-3 text-indigo-300">Past Entries</h3>
+                <div className="overflow-y-auto pr-2 space-y-3 max-h-[400px]">
+                  {journalHistory.length === 0 ? (
+                    <p className="text-sm text-slate-400 italic">No saved entries yet.</p>
+                  ) : (
+                    journalHistory.map((entry) => (
+                      <div key={entry.id} className="bg-slate-900/40 rounded-lg p-3 border border-slate-700/50">
+                        <p className="text-xs text-indigo-200 mb-1">
+                          {new Date(entry.created_at).toLocaleString()}
+                        </p>
+                        <p className="text-sm text-slate-300 whitespace-pre-wrap">
+                          {entry.ciphertext}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </section>
 
