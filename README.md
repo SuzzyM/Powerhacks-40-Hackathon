@@ -2,61 +2,81 @@
 
 A secure web portal providing community support, resources, AI chat assistance, and a private self-care space (journaling & safety planning).
 
+## Key Features
+
+*   **Community Forum**: Anonymous, safe space for peer support.
+*   **AI Chatbot**: Confidential support assistant powered by **Google Gemini 2.0 Flash**.
+*   **Self-Care Tools**: Private journaling and safety planning.
+*   **Resource Directory**: Curated list of support resources.
+*   **Quick Exit**: Prominent button to immediately redirect to an innocuous website (Google Weather).
+
 ## Security Features
 
-- **No Indexing**: All pages include headers to prevent search engine indexing
-- **Anonymization**: Community forum uses anonymous, non-traceable user IDs
-- **Quick Exit**: Prominent button to immediately redirect to an innocuous website
-- **Secure API Proxy**: All AI API calls are proxied through server-side endpoints
-- **Session-Based Chat**: Chat history is not permanently stored
-- **HTTPS Enforcement**: All traffic must use HTTPS with HSTS headers
- - **Encrypted Journaling (Design)**: Journal entries and safety plans are designed to be end-to-end encrypted so that only the user can read them (server stores ciphertext only).
+- **No Indexing**: All pages include headers to prevent search engine indexing.
+- **Anonymization**: Community forum uses anonymous, non-traceable user IDs.
+- **Secure API Proxy**: All AI API calls are proxied through server-side endpoints.
+- **Session-Based Chat**: Chat history is not permanently stored.
+- **HTTPS Enforcement**: All traffic must use HTTPS.
+- **Supabase RLS**: Row-Level Security policies enforce data access rules at the database level.
 
 ## Technology Stack
 
 - **Frontend**: Next.js (Pages Router) with TypeScript
 - **Styling**: Tailwind CSS
 - **Backend**: Next.js API Routes (serverless functions)
-- **Database**: PostgreSQL (with Row-Level Security recommendations)
+- **Database**: Supabase (PostgreSQL)
+- **AI Model**: Google Gemini 2.0 Flash (via `@google/generative-ai`)
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ and npm/yarn
-- PostgreSQL database (for production)
+- Node.js 18+ and npm
+- A [Supabase](https://supabase.com/) project
+- A [Google AI Studio](https://aistudio.google.com/) API Key
 
 ### Installation
 
-1. Install dependencies:
-```bash
-npm install
-```
+1.  **Clone the repository** (if applicable) or navigate to the project directory.
 
-2. Create a `.env.local` file with your environment variables:
-```env
-# Database (for production)
-DATABASE_URL=postgresql://user:password@localhost:5432/safeharbor
+2.  **Install dependencies**:
+    ```bash
+    npm install
+    ```
 
-# LLM API Key (for AI chat)
-OPENAI_API_KEY=your_api_key_here
+3.  **Configure Environment Variables**:
+    Create a `.env.local` file in the root directory with the following variables:
 
-# Twilio (for SOS SMS notifications)
-TWILIO_ACCOUNT_SID=your_account_sid
-TWILIO_AUTH_TOKEN=your_auth_token
-TWILIO_PHONE_NUMBER=your_phone_number
+    ```env
+    # Supabase Configuration
+    NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-# SendGrid (for SOS email notifications)
-SENDGRID_API_KEY=your_api_key_here
-SENDGRID_FROM_EMAIL=noreply@safeharbor.example.com
-```
+    # AI Chat Configuration (Google Gemini)
+    GEMINI_API_KEY=your_gemini_api_key
 
-3. Run the development server:
-```bash
-npm run dev
-```
+    # Feature Flags
+    ENABLE_CHAT=true
+    ENABLE_FORUM=true
+    ENABLE_RESOURCES=true
+    ENABLE_SOS=false  # Disabled by default
+    
+    # Session Security
+    SESSION_SECRET=your_random_32_char_string
+    ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+4.  **Setup Database**:
+    *   Go to your Supabase project's **SQL Editor**.
+    *   Copy the contents of `supabase_schema.sql` from this project.
+    *   Run the script to create the necessary tables (`forum_threads`, `forum_posts`, `journal_entries`, `safety_plans`) and RLS policies.
+
+5.  **Run the development server**:
+    ```bash
+    npm run dev
+    ```
+
+6.  **Open the app**:
+    Visit [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Project Structure
 
@@ -64,122 +84,39 @@ npm run dev
 ├── pages/
 │   ├── index.tsx              # Homepage
 │   ├── auth/
-│   │   └── login.tsx          # Login page (with MFA placeholder)
-│   ├── community/
-│   │   └── index.tsx          # Community forum list
+│   │   └── login.tsx          # Login page
+│   ├── community/             # Forum pages
 │   ├── resources.tsx          # Resource directory
 │   ├── chat.tsx               # AI chat page
 │   ├── self-care.tsx          # Journaling & Safety Plan page
 │   └── api/
-│       ├── chat.ts            # AI chat API endpoint
-│       ├── forum.ts           # Forum API endpoint
-│       └── journal.ts         # Journal & safety plan API endpoint
+│       ├── chat.ts            # AI chat API (Gemini)
+│       ├── forum.ts           # Forum API (Supabase)
+│       └── journal.ts         # Journal API (Supabase)
 ├── src/
-│   ├── components/
-│   │   └── QuickExitButton.tsx
-│   ├── contexts/
-│   │   └── CommunityContext.tsx
-│   └── api/
-│       ├── chat.ts
-│       ├── forum.ts
-│       └── journal.ts
-└── styles/
-    └── globals.css
+│   ├── components/            # Reusable UI components
+│   ├── utils/
+│   │   └── supabase.ts        # Supabase client initialization
+│   └── api/                   # Backend logic implementation
+├── supabase_schema.sql        # Database setup script
+└── ...
 ```
 
-## Deployment Strategy
+## Deployment
 
-### Frontend/API Host
+### Vercel (Recommended)
 
-Deploy to **Vercel** or **Netlify** for:
-- Built-in CDN
-- Automatic SSL certificates
-- Serverless functions for API routes
-- Easy CI/CD integration
+1.  Push your code to a GitHub repository.
+2.  Import the project into Vercel.
+3.  Add the **Environment Variables** from your `.env.local` to the Vercel project settings.
+4.  Deploy.
 
-### Database Host
+### Database Security
 
-Use a **Managed PostgreSQL Service**:
-- **AWS RDS**: Enterprise-grade security, automated backups
-- **Supabase**: PostgreSQL with built-in RLS and auth
-- **Neon**: Serverless PostgreSQL
-
-**Security Configuration:**
-- Enable Row-Level Security (RLS) on all tables
-- Configure firewall to only allow connections from Frontend/API host
-- Use SSL/TLS for all database connections
-- Enable automated security patching
-
-### Web Application Firewall (WAF)
-
-Implement **Cloudflare** or **AWS WAF** to protect against:
-- XSS (Cross-Site Scripting)
-- SQL Injection
-- DDoS attacks
-- Rate limiting
-
-### CI/CD Pipeline
-
-A GitHub Actions workflow placeholder is included. Configure:
-- Automatic deployment on merge to `main` branch
-- Environment variable management
-- Database migration scripts
-- Security scanning
-
-## Security Implementation Notes
-
-### Row-Level Security (RLS)
-
-When setting up PostgreSQL, enable RLS on all tables:
-
-```sql
--- Example: Enable RLS on forum_posts table
-ALTER TABLE forum_posts ENABLE ROW LEVEL SECURITY;
-
--- Create policy for anonymous reads
-CREATE POLICY "Allow anonymous reads" ON forum_posts
-  FOR SELECT USING (true);
-
--- Create policy for anonymous writes (with validation)
-CREATE POLICY "Allow anonymous writes" ON forum_posts
-  FOR INSERT WITH CHECK (author_id LIKE 'anon_%');
-```
-
-### MFA/2FA Implementation
-
-The login page includes placeholder comments for MFA. In production:
-- Use TOTP (Time-based One-Time Password) via authenticator apps
-- Support SMS-based 2FA as fallback (with rate limiting)
-- Require MFA for all login attempts
-
-### API Key Security
-
-- Never expose API keys in client-side code
-- Store all keys in environment variables
-- Use server-side API routes to proxy LLM requests
-- Rotate keys regularly
-- Monitor usage for anomalies
-
-## Development
-
-### Building for Production
-
-```bash
-npm run build
-npm start
-```
-
-### Linting
-
-```bash
-npm run lint
-```
+The project uses Supabase Row Level Security (RLS).
+*   **Forum**: Public read access, anonymous write access.
+*   **Journal/Safety Plans**: Private access (currently relaxed for demo purposes to allow anonymous creation).
 
 ## License
 
 This project is private and confidential.
-
-## Support
-
-For security concerns or issues, please contact the development team.
-
